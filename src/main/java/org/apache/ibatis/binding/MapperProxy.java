@@ -1,5 +1,5 @@
-/*
- *    Copyright 2009-2021 the original author or authors.
+/**
+ *    Copyright 2009-2020 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import java.util.Map;
 
 import org.apache.ibatis.reflection.ExceptionUtil;
 import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.util.MapUtil;
 
 /**
  * @author Clinton Begin
@@ -92,7 +91,15 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
 
   private MapperMethodInvoker cachedInvoker(Method method) throws Throwable {
     try {
-      return MapUtil.computeIfAbsent(methodCache, method, m -> {
+      // A workaround for https://bugs.openjdk.java.net/browse/JDK-8161372
+      // It should be removed once the fix is backported to Java 8 or
+      // MyBatis drops Java 8 support. See gh-1929
+      MapperMethodInvoker invoker = methodCache.get(method);
+      if (invoker != null) {
+        return invoker;
+      }
+
+      return methodCache.computeIfAbsent(method, m -> {
         if (m.isDefault()) {
           try {
             if (privateLookupInMethod == null) {
